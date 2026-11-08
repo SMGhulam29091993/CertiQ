@@ -1,0 +1,23 @@
+{
+  "name": "@certiq/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Ask console. Talks to the API over HTTP only; imports types (never runtime code) from @certiq/contracts.",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^16.4.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@certiq/contracts": "workspace:*",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
+  }
+}

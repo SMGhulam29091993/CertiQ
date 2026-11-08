@@ -1,0 +1,10 @@
+id: refusal-cac-meta
+kind: regression
+category: refusal
+question: What was our customer acquisition cost on Meta ads last quarter?
+today: "2026-11-08"
+expect:
+  status: refused
+  refusal_reason: not_certified
+tags: [plausible-but-missing]
+source: no ad-spend metric exists; model may be tempted to divide revenue by new patients

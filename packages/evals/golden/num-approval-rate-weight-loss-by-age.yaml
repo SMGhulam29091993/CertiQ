@@ -1,0 +1,14 @@
+id: num-approval-rate-weight-loss-by-age
+kind: capability
+category: numeric
+question: What was the consultation approval rate for weight loss by age band from January to September 2026?
+today: "2026-11-08"
+expect:
+  status: answered
+  query:
+    metric: consultation_approval_rate
+    dimensions: [age_band]
+    filters: { product_line: [weight_loss] }
+    time_range: { start: "2026-01-01", end: "2026-10-01" }
+tags: [ratio, filter, breakdown]
+source: ratio metric — must not be re-averaged across groups by the model

@@ -1,0 +1,23 @@
+{
+  "name": "@certiq/semantic-layer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The certified metrics layer: registry (metrics.yaml), SQL compiler, read-only repository, and the one tool agents may call.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@certiq/contracts": "workspace:*",
+    "pg": "^8.13.0",
+    "yaml": "^2.6.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0"
+  }
+}

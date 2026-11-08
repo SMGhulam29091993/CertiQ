@@ -1,0 +1,34 @@
+{
+  "name": "certiq",
+  "private": true,
+  "description": "CertiQ — a certified-metrics analytics agent: answers business questions only from a governed semantic layer, never by guessing.",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @certiq/database migrate",
+    "db:seed": "pnpm --filter @certiq/database seed",
+    "eval": "pnpm --filter @certiq/evals eval",
+    "eval:fast": "pnpm --filter @certiq/evals eval --fast",
+    "eval:baseline": "pnpm --filter @certiq/evals eval:baseline",
+    "eval:truth": "pnpm --filter @certiq/evals truth",
+    "eval:validate": "pnpm --filter @certiq/evals validate"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "sharp"]
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@certiq/agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Analyst (generator), Auditor (judge) and the Orchestrator that runs guardrails around them under a budget.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@certiq/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@certiq/llm": "workspace:*"
+  }
+}

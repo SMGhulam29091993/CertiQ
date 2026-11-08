@@ -1,0 +1,17 @@
+{
+  "name": "@certiq/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Interfaces and Zod schemas only. No implementations. Every package depends on this; this depends on nothing internal.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  }
+}

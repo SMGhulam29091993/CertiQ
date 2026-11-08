@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.next/
+.turbo/
+**/*.log
+packages/evals/reports/

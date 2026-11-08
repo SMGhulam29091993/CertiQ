@@ -1,0 +1,17 @@
+{
+  "name": "@certiq/guardrails",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Single-purpose guardrail classes for each stage (input, tool_result, output) plus a composable chain.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@certiq/contracts": "workspace:*"
+  }
+}

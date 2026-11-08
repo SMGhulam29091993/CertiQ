@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: certiq-db
+    environment:
+      POSTGRES_USER: certiq_admin
+      POSTGRES_PASSWORD: certiq_admin
+      POSTGRES_DB: certiq
+    ports:
+      - "5433:5432"
+    volumes:
+      - certiq-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U certiq_admin -d certiq"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  certiq-pgdata:

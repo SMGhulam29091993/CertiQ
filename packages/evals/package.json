@@ -1,0 +1,22 @@
+{
+  "name": "@certiq/evals",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Golden-set eval harness. Ground truth comes from the certified tool itself, never from hand-typed numbers.",
+  "scripts": {
+    "eval": "tsx --env-file-if-exists=../../.env src/cli.ts",
+    "eval:baseline": "tsx --env-file-if-exists=../../.env src/cli.ts --write-baseline",
+    "validate": "tsx src/cli.ts --validate-only",
+    "truth": "tsx --env-file-if-exists=../../.env src/ground-truth.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@certiq/contracts": "workspace:*",
+    "@certiq/guardrails": "workspace:*",
+    "@certiq/semantic-layer": "workspace:*",
+    "yaml": "^2.6.0",
+    "zod": "^3.24.0"
+  }
+}

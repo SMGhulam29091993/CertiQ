@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info:
+  title: CertiQ API
+  version: 0.1.0
+  description: |
+    Certified-metrics analytics agent. Every response uses the envelope
+    { success, message, data }. Updated in the same change as any route (int-standards.ts.md).
+servers:
+  - url: http://localhost:4000/api/v1
+paths:
+  /ask:
+    post:
+      operationId: ask
+      summary: Ask a business question (ask-console.API01)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [question]
+              properties:
+                question: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        "200":
+          description: |
+            Run completed. data.status is one of answered | refused |
+            needs_clarification | blocked | error. Blocked and refused are successful
+            runs of the guardrails, not HTTP errors.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Envelope" }
+        "400": { description: Body failed validation }
+        "429": { description: Rate limit (20/min) }
+        "501": { description: Pipeline step not implemented yet (names the task id) }
+  /metrics:
+    get:
+      operationId: listMetrics
+      summary: List certified metric definitions (ask-console.API02)
+      responses:
+        "200":
+          description: Catalog (definitions only, never data)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Envelope" }
+  /health:
+    get:
+      operationId: health
+      summary: Liveness + DB reachability (ask-console.API03)
+      responses:
+        "200": { description: Healthy }
+        "503": { description: Database unreachable }
+components:
+  schemas:
+    Envelope:
+      type: object
+      required: [success, message]
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: {}

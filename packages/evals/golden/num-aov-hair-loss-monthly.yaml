@@ -1,0 +1,14 @@
+id: num-aov-hair-loss-monthly
+kind: regression
+category: numeric
+question: Show the monthly average order value for hair loss from April to June 2026.
+today: "2026-11-08"
+expect:
+  status: answered
+  query:
+    metric: average_order_value_usd
+    filters: { product_line: [hair_loss] }
+    grain: month
+    time_range: { start: "2026-04-01", end: "2026-07-01" }
+tags: [grain, trend]
+source: time-grain selection

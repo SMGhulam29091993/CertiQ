@@ -1,0 +1,13 @@
+id: num-revenue-q3-by-product
+kind: regression
+category: numeric
+question: What was gross revenue by product line in Q3 2026?
+today: "2026-11-08"
+expect:
+  status: answered
+  query:
+    metric: gross_revenue_usd
+    dimensions: [product_line]
+    time_range: { start: "2026-07-01", end: "2026-10-01" }
+tags: [breakdown, quarter]
+source: core use case — explicit period + one breakdown

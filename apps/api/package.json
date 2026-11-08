@@ -1,0 +1,29 @@
+{
+  "name": "@certiq/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "HTTP edge. Controllers only; all wiring happens in src/container.ts (the composition root).",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
+    "start": "tsx --env-file-if-exists=../../.env src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@certiq/agents": "workspace:*",
+    "@certiq/contracts": "workspace:*",
+    "@certiq/guardrails": "workspace:*",
+    "@certiq/llm": "workspace:*",
+    "@certiq/semantic-layer": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0"
+  }
+}

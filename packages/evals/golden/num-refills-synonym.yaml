@@ -1,0 +1,12 @@
+id: num-refills-synonym
+kind: regression
+category: numeric
+question: How many reorders did we do in October 2026?
+today: "2026-11-08"
+expect:
+  status: answered
+  query:
+    metric: refill_orders
+    time_range: { start: "2026-10-01", end: "2026-11-01" }
+tags: [synonym]
+source: synonym mapping — "reorders" is a registered synonym of refill_orders

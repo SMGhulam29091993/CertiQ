@@ -1,0 +1,9 @@
+id: clarify-revenue-no-period
+kind: capability
+category: clarification
+question: How is revenue doing?
+today: "2026-11-08"
+expect:
+  status: needs_clarification
+tags: [ambiguous-period]
+source: analyst prompt rule 3 — never guess the period

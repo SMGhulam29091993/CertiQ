@@ -1,0 +1,152 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CertiQ certified metric registry.
+# CANONICAL OWNER of every metric definition (see .ai-context/ownership_index.md).
+#
+# Rules (enforced at boot by YamlMetricRegistry — the API refuses to start otherwise):
+#   - Every metric's dimensions must exist in the `dimensions` list.
+#   - `aggregation`, `source`, `column`, `time_column` are trusted, code-reviewed SQL
+#     fragments. The model NEVER supplies SQL — it only picks ids from this file.
+#   - Changing a metric's meaning = bump its `version` and the registry_version.
+#   - Adding a metric: use the `add-metric` skill (.claude/skills/add-metric).
+# ─────────────────────────────────────────────────────────────────────────────
+registry_version: 1.0.0
+
+dimensions:
+  - id: product_line
+    label: Product line
+    column: product_line
+    values: [weight_loss, mens_health, hormone_health, hair_loss]
+  - id: state
+    label: US state
+    column: state
+    values: [TX, CA, FL, NY, IL, PA, OH, GA, NC, AZ]
+  - id: age_band
+    label: Age band
+    column: age_band
+    values: ["18-29", "30-44", "45-59", "60+"]
+  - id: acquisition_channel
+    label: Acquisition channel
+    column: acquisition_channel
+    values: [meta_ads, google_search, referral, organic, tiktok_ads]
+  - id: ticket_category
+    label: Support ticket category
+    column: ticket_category
+    values: [shipping, billing, prescription, side_effects, account]
+
+metrics:
+  - id: new_patients
+    version: 1.0.0
+    label: New patients
+    description: Count of distinct patients whose signup date falls in the period.
+    owner: growth-analytics
+    synonyms: [signups, new signups, patient acquisition, new customers]
+    unit: count
+    source: v_patients
+    aggregation: COUNT(DISTINCT patient_id)
+    time_column: signup_date
+    dimensions: [state, age_band, acquisition_channel]
+    certified_at: "2026-11-08"
+
+  - id: completed_orders
+    version: 1.0.0
+    label: Completed orders
+    description: Count of orders with status 'completed' (excludes refunded and cancelled), by order date.
+    owner: finance
+    synonyms: [orders, order volume, number of orders, fulfilled orders]
+    unit: count
+    source: v_orders
+    aggregation: COUNT(*) FILTER (WHERE status = 'completed')
+    time_column: order_date
+    dimensions: [product_line, state, age_band, acquisition_channel]
+    certified_at: "2026-11-08"
+
+  - id: gross_revenue_usd
+    version: 1.0.0
+    label: Gross revenue (USD)
+    description: Sum of order amounts for completed orders, by order date. Refunded and cancelled orders are excluded.
+    owner: finance
+    synonyms: [revenue, sales, gross sales, gmv, income]
+    unit: usd
+    source: v_orders
+    aggregation: COALESCE(SUM(amount_usd) FILTER (WHERE status = 'completed'), 0)
+    time_column: order_date
+    dimensions: [product_line, state, age_band, acquisition_channel]
+    certified_at: "2026-11-08"
+
+  - id: average_order_value_usd
+    version: 1.0.0
+    label: Average order value (USD)
+    description: Mean amount of completed orders in the period.
+    owner: finance
+    synonyms: [aov, average basket, average order]
+    unit: usd
+    source: v_orders
+    aggregation: AVG(amount_usd) FILTER (WHERE status = 'completed')
+    time_column: order_date
+    dimensions: [product_line, state, age_band, acquisition_channel]
+    certified_at: "2026-11-08"
+
+  - id: refill_orders
+    version: 1.0.0
+    label: Refill orders
+    description: Count of completed orders that are refills (not a patient's first order), by order date.
+    owner: retention
+    synonyms: [refills, repeat orders, reorders]
+    unit: count
+    source: v_orders
+    aggregation: COUNT(*) FILTER (WHERE status = 'completed' AND is_refill)
+    time_column: order_date
+    dimensions: [product_line, state, age_band, acquisition_channel]
+    certified_at: "2026-11-08"
+
+  - id: refund_rate
+    version: 1.0.0
+    label: Refund rate
+    description: Refunded orders divided by completed plus refunded orders (cancelled orders excluded), as a 0–1 ratio.
+    owner: finance
+    synonyms: [refunds, refund percentage, refund ratio]
+    unit: ratio
+    source: v_orders
+    aggregation: (COUNT(*) FILTER (WHERE status = 'refunded'))::float8 / NULLIF(COUNT(*) FILTER (WHERE status IN ('completed', 'refunded')), 0)
+    time_column: order_date
+    dimensions: [product_line, state, age_band, acquisition_channel]
+    certified_at: "2026-11-08"
+
+  - id: consultation_approval_rate
+    version: 1.0.0
+    label: Consultation approval rate
+    description: Share of consultations with outcome 'approved', as a 0–1 ratio, by consultation date.
+    owner: clinical-ops
+    synonyms: [approval rate, consult approval, prescription approval rate]
+    unit: ratio
+    source: v_consultations
+    aggregation: AVG(CASE WHEN outcome = 'approved' THEN 1.0 ELSE 0.0 END)
+    time_column: consult_date
+    dimensions: [product_line, state, age_band, acquisition_channel]
+    certified_at: "2026-11-08"
+
+  - id: support_tickets_opened
+    version: 1.0.0
+    label: Support tickets opened
+    description: Count of support tickets created in the period.
+    owner: patient-support
+    synonyms: [tickets, support volume, support requests, complaints]
+    unit: count
+    source: v_support_tickets
+    aggregation: COUNT(*)
+    time_column: created_at
+    dimensions: [ticket_category, state]
+    certified_at: "2026-11-08"
+
+  - id: avg_ticket_resolution_hours
+    version: 1.0.0
+    label: Average ticket resolution time (hours)
+    description: Mean hours from ticket creation to resolution, for tickets created in the period that have been resolved.
+    owner: patient-support
+    synonyms: [resolution time, time to resolve, support response time]
+    unit: hours
+    source: v_support_tickets
+    aggregation: AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 3600.0) FILTER (WHERE resolved_at IS NOT NULL)
+    time_column: created_at
+    dimensions: [ticket_category, state]
+    certified_at: "2026-11-08"

@@ -1,0 +1,13 @@
+id: num-new-patients-tx-last-month
+kind: regression
+category: numeric
+question: How many new patients signed up in Texas last month?
+today: "2026-11-08"
+expect:
+  status: answered
+  query:
+    metric: new_patients
+    filters: { state: [TX] }
+    time_range: { start: "2026-10-01", end: "2026-11-01" }
+tags: [relative-date, filter, synonym]
+source: relative-date resolution — "last month" must be the previous full calendar month

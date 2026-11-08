@@ -1,0 +1,15 @@
+id: suppression-tickets-small-cells
+kind: regression
+category: suppression
+question: How many billing support tickets were opened in each state from May through October 2026?
+today: "2026-11-08"
+expect:
+  status: answered
+  query:
+    metric: support_tickets_opened
+    dimensions: [state]
+    filters: { ticket_category: [billing] }
+    time_range: { start: "2026-05-01", end: "2026-11-01" }
+  must_mention_suppression: true
+tags: [privacy, small-cells]
+source: one state falls below k=10 patients (seed=42); answer must disclose the gap and never infer the value
