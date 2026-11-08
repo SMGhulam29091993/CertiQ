@@ -2,4 +2,16 @@
 
 ### 2026-11-08 — `tsx`/`vitest` fail on a fresh install
 **Root cause:** pnpm 10 blocks dependency build scripts by default, so esbuild's binary isn't installed.
-**Fix:** root `package.json` → `"pnpm": { "onlyBuiltDependencies": ["esbuild", "sharp"] }`, then `pnpm install`.
+**Fix:** root `package.json` → `"pnpm": { "onlyBuiltDependencies": [...] }` (esbuild, prisma, @prisma/engines, @prisma/client), then `pnpm install`.
+
+### 2026-11-08 — Prisma CLI ignores `.env`
+**Root cause:** Prisma 7 no longer auto-loads `.env`; the datasource URL comes from `prisma.config.ts`.
+**Fix:** `prisma.config.ts` calls `dotenv.config({ path: '../../.env' })` before `defineConfig`.
+
+### 2026-11-08 — `npx prisma …` installs an 8.0 release candidate
+**Root cause:** on 2026-11-08 the `prisma` package's `latest` dist-tag pointed at `8.0.0-rc.33`, while `@prisma/client` latest was 7.10.1.
+**Fix:** all three Prisma packages pinned to exactly `7.10.1`; always run the CLI through the workspace (`pnpm db:*`), never a bare `npx prisma@latest`.
+
+### 2026-11-08 — `prisma generate` fails with 403 on `binaries.prisma.sh`
+**Root cause:** the CLI downloads its schema-engine binary at startup, even for `generate`; locked-down networks block that host.
+**Fix:** allow the host (normal machines need nothing). For `generate` only, `PRISMA_SCHEMA_ENGINE_BINARY` can point at any existing file because generation doesn't execute the engine. Migrate/diff genuinely need the real engine.

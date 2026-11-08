@@ -10,6 +10,8 @@ services:
       - "5433:5432"
     volumes:
       - certiq-pgdata:/var/lib/postgresql/data
+      # Creates the shadow database used by `pnpm db:drift` (runs once, on first volume init).
+      - ./packages/database/docker/init-shadow-db.sql:/docker-entrypoint-initdb.d/10-shadow.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U certiq_admin -d certiq"]
       interval: 3s

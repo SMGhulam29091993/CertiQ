@@ -7,29 +7,52 @@
       "Edit(./packages/evals/golden/**)",
       "Write(./packages/evals/golden/**)",
       "Edit(./packages/evals/baseline.json)",
-      "Write(./packages/evals/baseline.json)"
+      "Write(./packages/evals/baseline.json)",
+      "Edit(./packages/database/src/generated/**)",
+      "Write(./packages/database/src/generated/**)",
+      "Edit(./packages/database/prisma/migrations/**/migration.sql)"
     ]
   },
   "hooks": {
     "PreToolUse": [
       {
         "matcher": "Edit|MultiEdit|Write",
-        "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-evals.sh\"" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-evals.sh\""
+          }
+        ]
       },
       {
         "matcher": "Bash",
-        "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-evals-bash.sh\"" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-evals-bash.sh\""
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Edit|MultiEdit|Write",
-        "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.sh\"" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.sh\""
+          }
+        ]
       }
     ],
     "Stop": [
       {
-        "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-checks.sh\"" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-checks.sh\""
+          }
+        ]
       }
     ]
   }

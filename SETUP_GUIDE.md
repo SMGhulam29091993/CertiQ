@@ -71,7 +71,8 @@ certiq/
 │   └── web/          Next.js 16 — ask console, answer card, catalog panel
 └── packages/
     ├── contracts/        interfaces + Zod schemas ONLY (depends on nothing internal)
-    ├── database/         schema.sql (views + read-only role), migrate, deterministic seed
+    ├── database/         Prisma: schema.prisma, migrations (tables → views + read-only role),
+    │                     prisma.config.ts, createPrismaClient(), deterministic dataset + seed
     ├── semantic-layer/   metrics.yaml, registry, SQL compiler, PG repository, CertifiedMetricTool
     ├── guardrails/       chain + input / tool_result / output guardrails
     ├── llm/              AnthropicProvider, ScriptedFakeProvider
@@ -82,6 +83,7 @@ certiq/
 ### Dependency direction (enforced by `package.json`)
 ```
 contracts  ←  semantic-layer, guardrails, llm, agents        (libraries know only interfaces)
+database   ←  semantic-layer   (Prisma client type + factory; only PrismaMetricRepository uses it)
            ←  evals  (+ semantic-layer, guardrails for ground truth)
            ←  api    (+ everything: it is the composition root)
            ←  web    (types only; talks to api over HTTP)
@@ -92,7 +94,7 @@ No library package imports another library's class. If you need one, you need an
 ### Pre-built vs live build
 | Built and verified | Left for the recorded session (stubs name the task) |
 |---|---|
-| contracts, database, semantic-layer, llm | `analyst-auditor-agents.T01` prompts |
+| contracts, database (Prisma), semantic-layer, llm | `analyst-auditor-agents.T01` prompts |
 | guardrails: chain, length, PHI, injection, suppression, citation | `analyst-auditor-agents.T02` analyst loop |
 | agents runtime: budget, tracer, run context | `analyst-auditor-agents.T03` auditor |
 | evals: schema, loader, 11 cases, `eval:truth` | `answer-guardrails.T04` numeric grounding |
@@ -106,21 +108,23 @@ No library package imports another library's class. If you need one, you need an
 ```bash
 # 1. Install
 corepack enable
-pnpm install                       # esbuild postinstall is allowed via pnpm.onlyBuiltDependencies
+pnpm install                       # build scripts for esbuild + Prisma allowed via pnpm.onlyBuiltDependencies
 
 # 2. Environment
 cp .env.example .env
 #   set ANTHROPIC_API_KEY
 #   optional: fill CERTIQ_PRICE_* from the current Anthropic pricing page (cost shows "n/a" until you do)
 
-# 3. Database
-pnpm db:up                         # docker compose: postgres:16 on localhost:5433
-pnpm db:migrate                    # tables, certified views, certiq_reader role
-pnpm db:seed                       # deterministic synthetic data (seed=42)
+# 3. Prisma client + database
+pnpm db:generate                   # generates packages/database/src/generated/prisma (git-ignored)
+pnpm db:up                         # docker compose: postgres:16 on :5433 (+ certiq_shadow DB)
+pnpm db:migrate                    # prisma migrate deploy: tables → certified views + certiq_reader
+pnpm db:drift                      # migrations vs schema.prisma — must exit 0
+pnpm db:seed                       # deterministic synthetic data via Prisma (seed=42)
 
 # 4. Verify (no API key needed)
 pnpm typecheck
-pnpm test
+pnpm test                          # includes DB integration tests when .env points at a live DB
 pnpm eval:validate
 pnpm eval:truth
 
@@ -148,7 +152,7 @@ mkdir -p apps packages
 Add to the root `package.json`:
 ```json
 "packageManager": "pnpm@10.28.0",
-"pnpm": { "onlyBuiltDependencies": ["esbuild", "sharp"] },
+"pnpm": { "onlyBuiltDependencies": ["esbuild", "sharp", "prisma", "@prisma/engines", "@prisma/client"] },
 "scripts": { "dev": "turbo run dev", "typecheck": "turbo run typecheck", "test": "turbo run test" }
 ```
 Create `turbo.json` with `build`, `dev` (`cache:false, persistent:true`), `typecheck`
@@ -194,11 +198,41 @@ pnpm add next react react-dom && pnpm add -D @types/react @types/react-dom @cert
 # next.config.ts → transpilePackages: ['@certiq/contracts']; import contracts with `import type` only
 ```
 
-### 5.4 Database
-`docker-compose.yml` with `postgres:16-alpine` on `5433:5432`. `packages/database/sql/schema.sql`
-creates base tables, `v_*` views, and the `certiq_reader` role with SELECT on views only and
-`default_transaction_read_only = on`. `migrate.ts` and `seed.ts` use `DATABASE_ADMIN_URL`; the API
-only ever sees `DATABASE_READONLY_URL`.
+### 5.4 Database with Prisma 7 (ADR-0006)
+```bash
+cd packages/database
+pnpm add @prisma/client@7.10.1 @prisma/adapter-pg@7.10.1 dotenv
+pnpm add -D prisma@7.10.1            # pin exactly — the CLI's `latest` tag has pointed at an RC
+```
+1. **`prisma.config.ts`** — Prisma 7 reads the URL from here, not from `schema.prisma`, and no longer
+   auto-loads `.env`:
+   ```ts
+   config({ path: '../../.env' });
+   export default defineConfig({
+     schema: 'prisma/schema.prisma',
+     migrations: { path: 'prisma/migrations', seed: 'tsx src/seed.ts' },
+     datasource: { url: process.env.DATABASE_ADMIN_URL ?? '', shadowDatabaseUrl: process.env.DATABASE_SHADOW_URL },
+   });
+   ```
+2. **`schema.prisma`** — `generator client { provider = "prisma-client"; output = "../src/generated/prisma" }`,
+   `datasource db { provider = "postgresql" }` (no `url`), models with `@map`/`@@map` to snake_case tables.
+3. **Migrations:**
+   ```bash
+   pnpm db:migrate:dev --name init                                      # tables + enums from the schema
+   pnpm db:migrate:dev --create-only --name certified_views_and_reader_role
+   #   → write CHECKs, v_* views (cast enums ::text), certiq_reader role + grants into that file
+   pnpm db:migrate                                                       # apply
+   ```
+4. **Client factory** — `createPrismaClient(url)` returns `new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) })`.
+   The caller passes the URL, so admin vs reader is explicit wherever a client is created.
+5. **Seed** — pure `generateDataset()` (unit-testable) + `createMany` writer on the admin URL.
+6. **Repository** — `PrismaMetricRepository` runs the compiler's SQL with `$queryRawUnsafe(sql, ...params)`
+   inside an interactive transaction (`SET TRANSACTION READ ONLY`, `SET LOCAL statement_timeout`).
+   That and `seed.ts` are the only allowed raw-unsafe call sites — `certified-metric-tool.UT09` fails otherwise.
+7. **Turbo** — a `generate` task (`outputs: src/generated/**`) that `typecheck`, `test`, `dev`, `build` depend on;
+   `globalPassThroughEnv: ["PRISMA_*", "DATABASE_*"]`.
+
+The API only ever receives `DATABASE_READONLY_URL`.
 
 ### 5.5 Lay down the SDD system (bootstrap order from the Hybrid guide §7)
 1. Skeleton: `.agent/rules`, `.agent/workflows`, `.ai-context/{specs,plans,tasks,test_cases,memory,state,decisions/archive}`.
@@ -218,13 +252,18 @@ only ever sees `DATABASE_READONLY_URL`.
 
 | Check | Command | Expected |
 |---|---|---|
-| All packages typecheck | `pnpm typecheck` | `Tasks: 9 successful` |
-| Unit tests | `pnpm test` | guardrails 9 ✓ · semantic-layer 8 ✓ |
+| Prisma client generated | `pnpm db:generate` | `✔ Generated Prisma Client (7.10.1)` |
+| Migrations applied | `pnpm db:migrate` | `2 migrations … applied` (`init`, `certified_views_and_reader_role`) |
+| No schema drift | `pnpm db:drift` | exit 0, empty diff |
+| All packages typecheck | `pnpm typecheck` | `Tasks: 10 successful` (incl. `generate`) |
+| Tests | `pnpm test` | guardrails 9 ✓ · database 2 ✓ · semantic-layer 13 ✓ (4 are real-DB integration tests) |
 | Golden cases valid | `pnpm eval:validate` | `✔ 11 golden cases valid` |
 | Seed counts | `pnpm db:seed` | 6000 patients · 5994 consultations · 17518 orders · 1434 tickets |
 | Ground truth | `pnpm eval:truth` | 6 numeric cases ✔; suppression case `rows=10 suppressed=1` |
-| Reader can't read base tables | `PGPASSWORD=certiq_reader psql -h localhost -p 5433 -U certiq_reader -d certiq -c "select 1 from orders"` | `permission denied for table orders` |
-| Reader can't write | `… -c "create table x(a int)"` | `read-only transaction` |
+| Reader can't read base tables | `certified-metric-tool.IT01` (or `psql … -U certiq_reader -c "select 1 from orders"`) | `permission denied for table orders` |
+| Metric txn is read-only even as admin | `certified-metric-tool.IT04` | write rejected |
+| Timeouts surface as TIMEOUT | `certified-metric-tool.IT03` | `pg_sleep(1)` at 200ms → `TIMEOUT` |
+| Unsafe SQL fenced | `certified-metric-tool.UT09` | no call sites outside the allow-list |
 | API boots | `pnpm --filter @certiq/api dev` | `✔ CertiQ API on :4000 — registry v1.0.0, 9 certified metrics` |
 | Health | `curl localhost:4000/api/v1/health` | `{"success":true,…"db":"up"…}` |
 | Ask (before live build) | `curl -XPOST localhost:4000/api/v1/ask -H 'content-type: application/json' -d '{"question":"revenue?"}'` | 501 naming `analyst-auditor-agents.T04` |
@@ -246,7 +285,7 @@ only ever sees `DATABASE_READONLY_URL`.
 | `test_cases/<slug>` | spec tables + `_integration.md` | spec table is canonical (ADR-0004) |
 | `ownership_index.md` | 7 shared facts | metric definitions owned by `metrics.yaml` |
 | `state/`, `memory/` | ✅ | real entries only — no backfill |
-| `decisions/` | ADR-0001 … 0005 | ADR-0001 explains why no RAG |
+| `decisions/` | ADR-0001 … 0006 | ADR-0001: why no RAG · ADR-0006: Prisma, and why metric SQL stays raw |
 | Gate 1 / Gate 2 | self-review, declared | + `eval-reviewer` subagent |
 | (new) Claude Code hooks | `.claude/settings.json` | turn prose rules into enforced ones |
 
@@ -305,6 +344,11 @@ right chain in `apps/api/src/container.ts`. No other file changes (Open/Closed).
 **Swap the LLM vendor** — new class in `packages/llm` implementing `ILLMProvider`; change one line
 in `container.ts`.
 
+**Change the database schema** — edit `packages/database/prisma/schema.prisma` →
+`pnpm db:migrate:dev --name <change>` → if a certified view needs the new column, add a
+`--create-only` migration that `CREATE OR REPLACE VIEW`s it (and re-grants) → `pnpm db:drift` →
+then the `add-metric` skill if a metric uses it. Never hand-edit an applied migration.
+
 **Add a golden case** — write `packages/evals/golden/<id>.yaml` yourself, check it with
 `pnpm eval:validate` and `pnpm eval:truth`, then re-record the baseline deliberately.
 
@@ -318,9 +362,15 @@ in `container.ts`.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `tsx`/`vitest` crash about esbuild | pnpm 10 blocked its postinstall | ensure `pnpm.onlyBuiltDependencies` includes `esbuild`, re-run `pnpm install` |
+| `Cannot find module './generated/prisma/client'` | client not generated | `pnpm db:generate` (turbo does it before typecheck/test/dev) |
+| Prisma says the datasource URL is empty | Prisma 7 doesn't auto-load `.env` | check root `.env` has `DATABASE_ADMIN_URL`; `prisma.config.ts` loads it |
+| `prisma` prints 8.x | ran a bare `npx prisma@latest` | use `pnpm db:*` scripts (pinned 7.10.1) |
+| 403 from `binaries.prisma.sh` | corporate network blocks engine download | allow the host, or set `PRISMA_SCHEMA_ENGINE_BINARY` to a local engine |
+| `db:drift` exits 2 | migrations and `schema.prisma` disagree | `pnpm db:migrate:dev --name align`, commit, re-run |
+| `db:drift` errors about shadow DB | volume created before the init script existed | `docker exec certiq-db createdb -U certiq_admin certiq_shadow` |
 | API exits "Invalid configuration" | missing/invalid env | read the listed keys; copy `.env.example` |
 | API exits "Database unreachable" | DB not up or wrong port | `pnpm db:up`; port is **5433** |
-| `permission denied for view` | migrate not run after a reset | `pnpm db:migrate` (re-grants) |
+| `permission denied for view` | migrations not applied after a reset | `pnpm db:migrate` (re-grants) |
 | Cost shows "n/a" | prices not configured | fill `CERTIQ_PRICE_*` from the official pricing page |
 | `/ask` returns 501 | live-build task not done yet | the message names the task |
 | Next build complains about contracts | value import in web | use `import type` only |
@@ -334,6 +384,9 @@ in `container.ts`.
 | Orient a new agent session | `CLAUDE.md` → `.ai-context/project_context.md` → `.agent/rules/agent-role.md` |
 | See what's next | `.ai-context/state/next.md` |
 | Know why no RAG | `.ai-context/decisions/ADR-0001-no-rag-over-data.md` |
+| Know why metric SQL isn't a Prisma query | `.ai-context/decisions/ADR-0006-prisma-for-schema-raw-sql-for-metrics.md` |
+| Browse the data | `pnpm db:studio` |
+| Rebuild the DB from scratch | `pnpm db:reset` (migrate reset + seed) |
 | See every number's ground truth | `pnpm eval:truth` |
 | Change what a metric means | `add-metric` skill; never hand-edit SQL elsewhere |
 | Change the review process | `.agent/rules/governance.md` only |

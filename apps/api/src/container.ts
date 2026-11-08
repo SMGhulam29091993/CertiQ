@@ -20,7 +20,7 @@ import {
 import { AnthropicProvider } from '@certiq/llm';
 import {
   CertifiedMetricTool,
-  PgMetricRepository,
+  PrismaMetricRepository,
   SqlQueryCompiler,
   YamlMetricRegistry,
 } from '@certiq/semantic-layer';
@@ -40,7 +40,7 @@ export interface Container {
 export function buildContainer(config: AppConfig): Container {
   // ── Semantic layer ────────────────────────────────────────────
   const registry = YamlMetricRegistry.fromFile();
-  const repository = PgMetricRepository.fromUrl(config.DATABASE_READONLY_URL);
+  const repository = PrismaMetricRepository.fromUrl(config.DATABASE_READONLY_URL);
   const compiler = new SqlQueryCompiler(registry);
   const metricTool = new CertifiedMetricTool(
     registry,

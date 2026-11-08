@@ -13,11 +13,8 @@
   },
   "dependencies": {
     "@certiq/contracts": "workspace:*",
-    "pg": "^8.13.0",
+    "@certiq/database": "workspace:*",
     "yaml": "^2.6.0",
     "zod": "^3.24.0"
-  },
-  "devDependencies": {
-    "@types/pg": "^8.11.0"
   }
 }

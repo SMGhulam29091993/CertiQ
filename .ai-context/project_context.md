@@ -17,7 +17,7 @@ Known deviation: pre-built tasks were implemented before any Gate 1 ran — reco
 Interfaces live in `@certiq/contracts`; every other package depends on them, never on each other's
 classes. `apps/api/src/container.ts` is the single composition root. A question flows: input
 guardrails → Analyst (fast model, one typed tool) → `CertifiedMetricTool` (Zod → registry-checked
-compiler → read-only Postgres → small-group suppression) → output guardrails (citation, numeric
+compiler → Prisma read-only transaction on Postgres → small-group suppression) → output guardrails (citation, numeric
 grounding) → Auditor (strong model, separate context, pass/fail only) → response with trace. Full
 detail: `architecture.md`.
 
@@ -43,6 +43,7 @@ Full rule text: `.agent/rules/agent-role.md`, `int-standards.ts.md`, `constituti
 ### Decisions (`decisions/`)
 - ADR-0001 no RAG over data · ADR-0002 own agent loop · ADR-0003 hand-built SQL compiler
 - ADR-0004 trimmed SDD for a solo demo · ADR-0005 just-in-time internal packages
+- ADR-0006 Prisma for schema/migrations/seed/client, raw parameterized SQL for metrics (supersedes ADR-0003)
 ### Memory (`memory/`)
 - `lessons.md` · `pitfalls.md` · `patterns.md` · `review-findings.md`
 ### Ownership Index

@@ -7,7 +7,8 @@ refuses rather than guesses.
 ## Project
 - **Path:** repository root (Turborepo + pnpm workspaces)
 - **Stack:** Node 22, TypeScript (strict), Zod, Express 5 (`apps/api`), Next.js 16 (`apps/web`),
-  PostgreSQL 16 (read-only role), Anthropic Messages API behind `ILLMProvider`, Vitest.
+  PostgreSQL 16 via Prisma 7 (driver adapter `@prisma/adapter-pg`; read-only role for the API),
+  Anthropic Messages API behind `ILLMProvider`, Vitest.
 - **Architecture:** fully class-based domain; interfaces in `@certiq/contracts`; concrete classes are
   wired ONLY in `apps/api/src/container.ts` (composition root). See `architecture.md`.
 
@@ -32,6 +33,8 @@ data credential the API holds; it can read certified views only.
 - Never hardcode business numbers — every figure comes from the certified tool.
 - Never edit `packages/evals/golden/**` or `packages/evals/baseline.json` (hook-enforced).
 - Every new metric goes through `metrics.yaml` + the `add-metric` skill — never ad-hoc SQL.
+- Never edit an applied migration or the generated Prisma client (both deny-listed); schema changes
+  always produce a new migration.
 - Comment *why*, not *what*; every stub names its task ID.
 - Update `.ai-context/` per `state-tracking.md` whenever code changes.
 - Keep `apps/api/openapi.yaml` in sync with routes (see `int-standards.ts.md`).

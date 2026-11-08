@@ -26,6 +26,14 @@ modules/<name>/
 One class per file: `<stage>/<name>.guardrail.ts`, `readonly id = '<stage>.<name>'`, implements
 `IGuardrail<T>`, returns `allow | transform | block` — never throws for expected cases.
 
+## Data access (Prisma)
+- Get a client only via `createPrismaClient(url)` from `@certiq/database`; never `new PrismaClient()` elsewhere.
+- Libraries receive the client (or a repository interface) by constructor — never import a module-level singleton.
+- Prefer Prisma models (`createMany`, `findMany`) for owned tables; tagged `$queryRaw\`…\`` when SQL is needed.
+- `$queryRawUnsafe`/`$executeRawUnsafe` only in the two allow-listed files (UT09).
+- The generated client (`src/generated/prisma`) is git-ignored; `turbo` runs `generate` before typecheck/test/dev.
+- Interactive transactions for multi-statement work; always pass `{ timeout, maxWait }`.
+
 ## Errors
 - Expected failures are `Result` values (`ok`/`err` from contracts). Exceptions are for bugs.
 - Stubs throw `NotImplementedError('<slug>.T<NN>')` so a 501 names the task.

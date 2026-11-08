@@ -1,0 +1,84 @@
+// CertiQ data model. SYNTHETIC DATA ONLY — no names, contact details or clinical notes exist here.
+// Base tables are owned by this schema. The certified views, CHECK constraints and the read-only
+// role live in a hand-written SQL migration (Prisma can't express them) — see
+// prisma/migrations/*_certified_views_and_reader_role/migration.sql and ADR-0006.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  completed
+  refunded
+  cancelled
+
+  @@map("order_status")
+}
+
+enum ConsultOutcome {
+  approved
+  denied
+
+  @@map("consult_outcome")
+}
+
+model Patient {
+  id                 Int      @id @default(autoincrement())
+  signupDate         DateTime @map("signup_date") @db.Date
+  state              String   @db.Char(2)
+  ageBand            String   @map("age_band")
+  acquisitionChannel String   @map("acquisition_channel")
+
+  consultations  Consultation[]
+  orders         Order[]
+  supportTickets SupportTicket[]
+
+  @@index([signupDate])
+  @@map("patients")
+}
+
+model Consultation {
+  id          Int            @id @default(autoincrement())
+  patientId   Int            @map("patient_id")
+  consultDate DateTime       @map("consult_date") @db.Date
+  productLine String         @map("product_line")
+  outcome     ConsultOutcome
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([consultDate])
+  @@map("consultations")
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  patientId   Int         @map("patient_id")
+  orderDate   DateTime    @map("order_date") @db.Date
+  productLine String      @map("product_line")
+  amountUsd   Decimal     @map("amount_usd") @db.Decimal(10, 2)
+  isRefill    Boolean     @map("is_refill")
+  status      OrderStatus
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([orderDate])
+  @@map("orders")
+}
+
+model SupportTicket {
+  id         Int       @id @default(autoincrement())
+  patientId  Int       @map("patient_id")
+  createdAt  DateTime  @map("created_at") @db.Timestamptz(6)
+  category   String
+  resolvedAt DateTime? @map("resolved_at") @db.Timestamptz(6)
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([createdAt])
+  @@map("support_tickets")
+}

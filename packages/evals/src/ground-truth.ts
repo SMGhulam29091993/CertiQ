@@ -1,7 +1,7 @@
 import { GuardrailChain, SmallGroupSuppressionGuardrail } from '@certiq/guardrails';
 import {
   CertifiedMetricTool,
-  PgMetricRepository,
+  PrismaMetricRepository,
   SqlQueryCompiler,
   YamlMetricRegistry,
 } from '@certiq/semantic-layer';
@@ -17,7 +17,7 @@ async function main(): Promise<void> {
   if (!url) throw new Error('DATABASE_READONLY_URL is not set.');
 
   const registry = YamlMetricRegistry.fromFile();
-  const repository = PgMetricRepository.fromUrl(url);
+  const repository = PrismaMetricRepository.fromUrl(url);
   const tool = new CertifiedMetricTool(
     registry,
     new SqlQueryCompiler(registry),

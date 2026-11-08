@@ -2,6 +2,7 @@
 ## Finished
 - metric-registry.T01–T04 — 2026-11-08 — Gate 2 reviewed by: (pending)
 - certified-metric-tool.T01–T05 — 2026-11-08 — Gate 2 reviewed by: (pending)
+- certified-metric-tool.T06 — 2026-11-08 — data layer moved to Prisma 7 (ADR-0006) — Gate 2 reviewed by: (pending)
 - answer-guardrails.T01–T03 — 2026-11-08 — Gate 2 reviewed by: (pending)
 - analyst-auditor-agents.T00 — 2026-11-08 — Gate 2 reviewed by: (pending)
 - eval-harness.T01 — 2026-11-08 — Gate 2 reviewed by: (pending)

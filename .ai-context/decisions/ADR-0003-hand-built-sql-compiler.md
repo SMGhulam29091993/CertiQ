@@ -1,5 +1,8 @@
 # ADR-0003: Hand-built SQL compiler over `pg`, not an ORM; schema re-created, not migrated
 
+> ⚠️ SUPERSEDED 2026-11-08 by ADR-0006 (Prisma adopted for schema, migrations, seed and client;
+> the hand-built compiler itself is retained). Move to `archive/` after 2027-02-08.
+
 ## Context
 Queries are dynamic (0–2 group-by dimensions, optional time grain, IN-filters) and aggregate-heavy.
 Prisma handles dynamic aggregates poorly (`$queryRaw` would bypass its safety anyway); a query

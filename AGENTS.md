@@ -11,7 +11,8 @@ the review process, and this file is not a substitute for it.
 
 ## Commands
 - `pnpm typecheck` · `pnpm test` · `pnpm eval:validate` · `pnpm eval:truth` · `pnpm eval` · `pnpm eval:fast`
-- `pnpm db:up` · `pnpm db:migrate` · `pnpm db:seed` · `pnpm dev`
+- `pnpm db:generate` · `pnpm db:up` · `pnpm db:migrate` · `pnpm db:drift` · `pnpm db:seed` · `pnpm db:studio` · `pnpm dev`
+- Schema changes: edit `packages/database/prisma/schema.prisma` → `pnpm db:migrate:dev --name <change>` (see constitution.md)
 
 ## Where the rules live (do not restate them here)
 `.agent/rules/` — agent-role · constitution · int-standards.ts · state-tracking · governance

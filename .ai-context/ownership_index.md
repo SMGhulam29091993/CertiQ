@@ -6,6 +6,18 @@ Any fact referenced by more than one file has exactly one canonical owner. Every
 **Referenced by:** specs/metric-registry, specs/certified-metric-tool, specs/eval-harness, apps/web catalog panel
 **Last updated:** 2026-11-08
 
+## database-schema
+**Canonical definition:** `packages/database/prisma/schema.prisma` (tables, enums, indexes) +
+`packages/database/prisma/migrations/20261108000100_certified_views_and_reader_role/migration.sql`
+(certified views, CHECKs, `certiq_reader` grants)
+**Referenced by:** metrics.yaml (`source`, `time_column`, dimension `column`), specs/certified-metric-tool, architecture.md
+**Last updated:** 2026-11-08
+
+## seed-dataset
+**Canonical definition:** `packages/database/src/dataset.ts › generateDataset` (seed=42)
+**Referenced by:** golden suppression case, architecture.md row counts, dataset.spec.ts (UT07)
+**Last updated:** 2026-11-08
+
 ## metric-query
 **Canonical definition:** `packages/contracts/src/query.ts › MetricQuerySchema`
 **Referenced by:** specs/certified-metric-tool, specs/analyst-auditor-agents, specs/eval-harness (golden `expect.query`)

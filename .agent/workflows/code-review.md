@@ -11,6 +11,8 @@ Run against the diff for one task (`<slug>.T<NN>`). Every box must be checked or
 ## Guardrail invariants (constitution.md)
 - [ ] No path lets a number reach the user without a `MetricResult` from this run
 - [ ] No model-authored SQL; all values bound as parameters
+- [ ] No new `$queryRawUnsafe`/`$executeRawUnsafe` call sites (UT09 green; allow-list unchanged or ADR'd)
+- [ ] Schema change ⇒ committed migration + `pnpm db:drift` exits 0
 - [ ] Budget checked after every LLM and tool call
 - [ ] Auditor cannot modify the answer
 - [ ] Suppressed values never shown, inferred or used for grounding

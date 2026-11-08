@@ -13,8 +13,15 @@
     "test": "turbo run test",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
+    "db:generate": "turbo run generate",
     "db:migrate": "pnpm --filter @certiq/database migrate",
+    "db:migrate:dev": "pnpm --filter @certiq/database migrate:dev",
+    "db:status": "pnpm --filter @certiq/database migrate:status",
+    "db:drift": "pnpm --filter @certiq/database drift",
+    "db:reset": "pnpm --filter @certiq/database reset && pnpm db:seed",
     "db:seed": "pnpm --filter @certiq/database seed",
+    "db:setup": "pnpm db:migrate && pnpm db:seed",
+    "db:studio": "pnpm --filter @certiq/database studio",
     "eval": "pnpm --filter @certiq/evals eval",
     "eval:fast": "pnpm --filter @certiq/evals eval --fast",
     "eval:baseline": "pnpm --filter @certiq/evals eval:baseline",
@@ -22,7 +29,7 @@
     "eval:validate": "pnpm --filter @certiq/evals validate"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "sharp"]
+    "onlyBuiltDependencies": ["esbuild", "sharp", "prisma", "@prisma/engines", "@prisma/client"]
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

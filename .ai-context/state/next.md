@@ -1,5 +1,9 @@
 # next.md
 ## Queued
+- Local Prisma check on the author's machine: `pnpm db:up && pnpm db:migrate && pnpm db:drift` (expect exit 0) — blocked on: none.
+  Reason: migrations were written by hand and applied with psql in the build sandbox, where the Prisma
+  schema engine couldn't be downloaded. If `db:drift` reports changes, run `pnpm db:migrate:dev --name align`
+  and record it in `memory/pitfalls.md`.
 - Gate 1 self-review — all six specs — blocked on: none
 - analyst-auditor-agents.T01 — prompts — blocked on: Gate 1
 - analyst-auditor-agents.T02 — analyst loop — blocked on: T01

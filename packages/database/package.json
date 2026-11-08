@@ -3,17 +3,28 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Schema, read-only role and deterministic synthetic seed. Admin credentials are used only here.",
+  "description": "Prisma schema, migrations (incl. certified views + read-only role), client factory and deterministic seed. Admin credentials are used only here.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts",
+    "generate": "prisma generate",
+    "migrate": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:status": "prisma migrate status",
+    "reset": "prisma migrate reset --force",
+    "drift": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code",
     "seed": "tsx --env-file-if-exists=../../.env src/seed.ts",
+    "studio": "prisma studio",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
-    "pg": "^8.13.0"
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "dotenv": "^17.4.2"
   },
   "devDependencies": {
-    "@types/pg": "^8.11.0"
+    "prisma": "7.10.1"
   }
 }
