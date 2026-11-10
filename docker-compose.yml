@@ -4,10 +4,11 @@ services:
     container_name: certiq-db
     environment:
       POSTGRES_USER: certiq_admin
-      POSTGRES_PASSWORD: certiq_admin
+      # Read from the repo-root .env (git-ignored); compose refuses to start if unset.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: certiq
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - certiq-pgdata:/var/lib/postgresql/data
       # Creates the shadow database used by `pnpm db:drift` (runs once, on first volume init).
