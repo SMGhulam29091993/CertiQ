@@ -64,3 +64,22 @@ describe('SmallGroupSuppressionGuardrail', () => {
     expect(v.value.suppressedRows).toBe(1);
   });
 });
+
+describe('GuardrailChain step records', () => {
+  it('analyst-auditor-agents.AC10 — one timed step per guardrail that ran, stopping at the block', async () => {
+    const out = await inputChain.run({ question: 'Which patients ordered tirzepatide in Texas?' });
+    expect(out.blocked).toBe(true);
+    // prompt_injection never ran, so it is not recorded.
+    expect(out.steps.map((s) => [s.id, s.action])).toEqual([
+      ['input.max_length', 'allow'],
+      ['input.phi_request', 'block'],
+    ]);
+    expect(out.steps[1]?.reason).toBeTruthy();
+    for (const s of out.steps) expect(s.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('records every guardrail on an allowed question', async () => {
+    const out = await inputChain.run({ question: 'What was gross revenue by product line in Q3 2026?' });
+    expect(out.steps.map((s) => s.action)).toEqual(['allow', 'allow', 'allow']);
+  });
+});

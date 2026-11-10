@@ -9,7 +9,12 @@
 - Decide whether the Stop hook runs `eval:fast` by default (currently opt-in via `CERTIQ_EVAL_ON_STOP=1`) — blocked on: owner decision.
 - eval-reviewer pass + Gate 2 for analyst-auditor-agents.T01–T04, answer-guardrails.T04, eval-harness.T02–T05 — blocked on: first live eval
 - Spec gap to consider: total-minus-breakdown differencing can reveal a suppressed cell; no guardrail covers it.
-- ask-console.T04 — end-to-end browser check — blocked on: none (needs DB + ANTHROPIC_API_KEY)
+- ask-console.T04 — end-to-end browser check — blocked on: none (needs DB + ANTHROPIC_API_KEY). Include the new
+  "Execution trace" list: expand it on an answered, a refused and a blocked question; check it at phone width.
+- Owner decision: amend analyst-auditor-agents AC10 / ask-console spec for per-step trace records, or mark them
+  SUPERSEDED for Gate 1 re-review — blocked on: owner decision.
+- Tool-result guardrails (small_group_suppression) run inside CertifiedMetricTool and don't appear as trace steps;
+  their effect shows in the analyst step only — blocked on: owner decision (would need the tool to see the run tracer).
 - Golden-case gaps for analyst prompt rules (human-only — agents can't edit golden/): rule 7 (tool error → correct once or refuse) has no case;
   rule 6 (phi_request refusal) is never reached because input.phi_request blocks first; rule 3 covers only an ambiguous period,
   not an ambiguous metric or breakdown; the graders don't check "no tool call" (rules 2, 3) or `suggestedMetrics` (rule 2) — blocked on: owner decision.

@@ -80,7 +80,12 @@ export class AuditorAgent implements IAuditorAgent {
         });
         return ok(normalised);
       }
-      ctx.tracer.event('auditor.parse_failed', { reason: verdict.reason, attempt });
+      if (attempt > 0) {
+        ctx.tracer.event('auditor.parse_failed', { reason: verdict.reason, repaired: true });
+        break;
+      }
+      // `.repair` suffix: the tracer counts it as this step's retry (RETRY_EVENT_SUFFIX).
+      ctx.tracer.event('auditor.repair', { reason: verdict.reason });
       // Echo only the text: the auditor has no tools, but if the model emits a tool_use block anyway,
       // replaying it would put a tool block into the auditor's context (AC5).
       messages.push({ role: 'assistant', content: [{ type: 'text', text: textOf(res.value) || '(no text)' }] });

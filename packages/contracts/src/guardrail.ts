@@ -19,14 +19,31 @@ export interface IGuardrail<T> {
   check(input: T): Promise<GuardrailVerdict<T>>;
 }
 
+/** Per-guardrail timing, so the run trace can show each guardrail as its own step. */
+export interface GuardrailStepRecord {
+  readonly id: string;
+  readonly action: GuardrailVerdict<unknown>['action'];
+  readonly durationMs: number;
+  /** Block reason; absent for allow, the transform reason for transform. */
+  readonly reason?: string;
+}
+
 export type ChainOutcome<T> =
-  | { readonly blocked: false; readonly value: T; readonly applied: readonly string[] }
+  | {
+      readonly blocked: false;
+      readonly value: T;
+      readonly applied: readonly string[];
+      /** Every guardrail that ran, in order. */
+      readonly steps: readonly GuardrailStepRecord[];
+    }
   | {
       readonly blocked: true;
       readonly by: string;
       readonly reason: string;
       readonly userMessage: string;
       readonly applied: readonly string[];
+      /** Every guardrail that ran, in order; the last one is the block. */
+      readonly steps: readonly GuardrailStepRecord[];
     };
 
 export interface IGuardrailChain<T> {

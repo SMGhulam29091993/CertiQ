@@ -52,7 +52,7 @@ const response = (
   evidence: [],
   userMessage: 'msg',
   guardrailsApplied: [],
-  trace: { runId: 'r', durationMs: 1, llmCalls: 1, toolCalls: 1, inputTokens: 1, outputTokens: 1, costUsd: null, events: [] },
+  trace: { runId: 'r', durationMs: 1, llmCalls: 1, toolCalls: 1, inputTokens: 1, outputTokens: 1, costUsd: null, events: [], steps: [] },
   ...extra,
 });
 

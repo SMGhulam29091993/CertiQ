@@ -22,3 +22,10 @@ export function formatValue(value: number | null, unit: Unit): string {
 export function formatCost(usdValue: number | null): string {
   return usdValue === null ? 'cost n/a' : `$${usdValue.toFixed(4)}`;
 }
+
+/** Guardrails run in well under a millisecond, so keep two decimals there instead of showing "0 ms". */
+export function formatDuration(ms: number): string {
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)} s`;
+  if (ms < 1) return `${ms.toFixed(2)} ms`;
+  return `${Math.round(ms)} ms`;
+}

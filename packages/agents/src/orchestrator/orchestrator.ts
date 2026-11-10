@@ -1,6 +1,8 @@
 import type {
   AppError,
   AskResponse,
+  ChainOutcome,
+  GuardrailStepRecord,
   IAnalystAgent,
   IAuditorAgent,
   IGuardrailChain,
@@ -10,6 +12,7 @@ import type {
   MetricResult,
   OutputGuardrailInput,
   RunContext,
+  TraceStepStatus,
 } from '@certiq/contracts';
 
 export interface OrchestratorDeps {
@@ -40,6 +43,9 @@ const MESSAGES = {
  *     → auditor ─error→ 'error' (fail closed) ─pass=false→ 'blocked' by 'auditor'
  *     → 'answered'
  * The orchestrator never edits the answer. It only routes, gates and records.
+ *
+ * Recording: every guardrail and agent that runs becomes one TraceStep (duration, LLM/tool calls,
+ * tokens, retries, final status) in execution order. Steps that are skipped are not recorded.
  */
 export class Orchestrator implements IOrchestrator {
   constructor(private readonly deps: OrchestratorDeps) {}
@@ -54,7 +60,8 @@ export class Orchestrator implements IOrchestrator {
     };
 
     try {
-      const input = await ctx.tracer.span('guardrails.input', () => this.deps.inputGuardrails.run({ question }));
+      const input = await this.deps.inputGuardrails.run({ question });
+      recordGuardrails(ctx, input);
       applied.push(...input.applied);
       if (input.blocked) {
         ctx.tracer.event('guardrail.blocked', { by: input.by, stage: 'input' });
@@ -65,7 +72,9 @@ export class Orchestrator implements IOrchestrator {
         });
       }
 
-      const run = await ctx.tracer.span('analyst', () => this.deps.analyst.answer(input.value.question, ctx));
+      const run = await ctx.tracer.step('analyst', 'agent', () => this.deps.analyst.answer(input.value.question, ctx), (r) =>
+        r.ok ? { status: r.value.answer.status } : failure(r.error),
+      );
       if (!run.ok) return respond(errorResponse(run.error));
       evidence = run.value.evidence;
       const { answer } = run.value;
@@ -78,9 +87,8 @@ export class Orchestrator implements IOrchestrator {
         });
       }
 
-      const output = await ctx.tracer.span('guardrails.output', () =>
-        this.deps.outputGuardrails.run({ question, answer, evidence }),
-      );
+      const output = await this.deps.outputGuardrails.run({ question, answer, evidence });
+      recordGuardrails(ctx, output);
       applied.push(...output.applied);
       if (output.blocked) {
         ctx.tracer.event('guardrail.blocked', { by: output.by, stage: 'output' });
@@ -94,16 +102,20 @@ export class Orchestrator implements IOrchestrator {
       const over = ctx.budget.exceeded();
       if (over) return respond(budgetError(ctx, over));
 
-      const audit = await ctx.tracer.span('auditor', () =>
-        this.deps.auditor.audit({ question, answer: output.value.answer, evidence }, ctx),
+      const audit = await ctx.tracer.step(
+        AUDITOR_GATE_ID,
+        'agent',
+        () => this.deps.auditor.audit({ question, answer: output.value.answer, evidence }, ctx),
+        (r) => (r.ok ? { status: r.value.pass ? 'passed' : 'failed' } : failure(r.error)),
       );
       if (!audit.ok) return respond(errorResponse(audit.error));
       applied.push(AUDITOR_GATE_ID);
       if (!audit.value.pass) {
         const blockers = audit.value.issues.filter((i) => i.severity === 'blocker').map((i) => i.message);
+        // No `answer`: the console renders answer.figures, and a number the auditor failed must not
+        // be shown — same rule as an output-guardrail block. The verdict stays for the "why".
         return respond({
           status: 'blocked',
-          answer: output.value.answer,
           audit: audit.value,
           blockedBy: { guardrail: AUDITOR_GATE_ID, reason: blockers.join('; ') || 'auditor failed the answer' },
           userMessage: MESSAGES.audit,
@@ -122,6 +134,38 @@ export class Orchestrator implements IOrchestrator {
       return respond({ status: 'error', userMessage: MESSAGES.internal });
     }
   }
+}
+
+const GUARDRAIL_STATUS: Record<GuardrailStepRecord['action'], TraceStepStatus> = {
+  allow: 'allowed',
+  transform: 'transformed',
+  block: 'blocked',
+};
+
+/** Guardrails make no LLM or tool calls, so only their timing and verdict vary. */
+function recordGuardrails(ctx: RunContext, outcome: ChainOutcome<unknown>): void {
+  for (const s of outcome.steps) {
+    ctx.tracer.recordStep({
+      name: s.id,
+      kind: 'guardrail',
+      durationMs: s.durationMs,
+      llmCalls: 0,
+      toolCalls: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      retries: 0,
+      status: GUARDRAIL_STATUS[s.action],
+      ...(s.action === 'block' && s.reason ? { detail: s.reason } : {}),
+    });
+  }
+}
+
+/**
+ * The step detail is shown in the console, so it carries the error code only — provider messages
+ * can hold request details. Budget reasons are our own text ("tool calls 5 > 4") and AC8 wants them visible.
+ */
+function failure(e: AppError) {
+  return { status: 'error' as const, detail: e.code === 'BUDGET_EXCEEDED' ? `${e.code}: ${e.message}` : e.code };
 }
 
 function budgetError(ctx: RunContext, reason: string) {

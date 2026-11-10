@@ -22,7 +22,7 @@ const response = (status: AskResponse['status'], value?: number): AskResponse =>
   evidence: [],
   userMessage: 'm',
   guardrailsApplied: [],
-  trace: { runId: 'r', durationMs: 1, llmCalls: 1, toolCalls: 1, inputTokens: 10, outputTokens: 5, costUsd: 0.002, events: [] },
+  trace: { runId: 'r', durationMs: 1, llmCalls: 1, toolCalls: 1, inputTokens: 10, outputTokens: 5, costUsd: 0.002, events: [], steps: [] },
 });
 
 const truth = (value: number): MetricResult => ({
