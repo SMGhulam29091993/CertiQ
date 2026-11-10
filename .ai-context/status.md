@@ -19,3 +19,4 @@ _Last updated: 2026-11-10_
 ### 2026-11-10
 - Gate 1 approved for all six specs.
 - Built analyst-auditor-agents.T01–T04, answer-guardrails.T04 (subagent A), eval-harness.T02–T05 (subagent B). Typecheck green (uncached); 85 unit tests green; golden set validates. No live-LLM or eval run yet. Stop-hook `eval:fast` step is opt-in (`CERTIQ_EVAL_ON_STOP=1`) pending owner decision.
+- analyst-auditor-agents.T02 revised: repair turn kept tools defined (live API would have rejected it), analyst now rejects answers not backed by this run's tool results; 24 agents tests green.

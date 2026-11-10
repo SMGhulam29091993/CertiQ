@@ -51,7 +51,10 @@ export class AnalystAgent implements IAnalystAgent {
     let repaired = false;
 
     for (;;) {
-      const call = await this.callLLM(ctx, { system, messages, tools: repaired ? [] : tools });
+      // Tools stay defined on the repair turn too: once the history holds tool_use/tool_result
+      // blocks, the Anthropic API rejects a request without `tools`, so dropping them would turn
+      // every post-tool repair into an LLM_ERROR. A tool call during repair is refused below.
+      const call = await this.callLLM(ctx, { system, messages, tools });
       if (!call.ok) return call;
       const response = call.value;
       messages.push({ role: 'assistant', content: response.content });
@@ -60,9 +63,24 @@ export class AnalystAgent implements IAnalystAgent {
         (b): b is Extract<LLMContentBlock, { type: 'tool_use' }> => b.type === 'tool_use',
       );
 
+      if (toolUses.length > 0 && repaired) {
+        // The repair turn exists to reformat an answer, not to fetch new data. More tool calls
+        // here would mean the earlier "final" answer wasn't grounded in anything.
+        ctx.tracer.event('analyst.parse_failed', { reason: 'tool_use during repair turn', repaired: true });
+        return err('LLM_ERROR', 'Analyst called the tool during the repair turn instead of answering.');
+      }
+
       if (toolUses.length === 0) {
         const parsed = parseAnswer(response);
-        if (parsed.ok) return ok({ answer: parsed.value, evidence, toolCalls });
+        if (parsed.ok) {
+          const ungrounded = provenanceProblem(parsed.value, evidence);
+          if (ungrounded) {
+            // AC1. Not repairable: asking again would just invite a different invented number.
+            ctx.tracer.event('analyst.ungrounded', { reason: ungrounded });
+            return err('LLM_ERROR', `Analyst answer not backed by this run's tool results: ${ungrounded}`);
+          }
+          return ok({ answer: parsed.value, evidence, toolCalls });
+        }
         if (repaired) {
           ctx.tracer.event('analyst.parse_failed', { reason: parsed.reason, repaired: true });
           return err('LLM_ERROR', `Analyst answer invalid after repair: ${parsed.reason}`);
@@ -153,6 +171,26 @@ function toModelView(r: MetricResult) {
     rows: r.rows,
     suppressedRows: r.suppressedRows,
   };
+}
+
+/**
+ * AC1 at the provenance level: an `answered` answer needs at least one successful tool result
+ * from this run, and every figure must cite a metric@version that was actually returned. This is
+ * what turns "tool TIMEOUT → model answers anyway" into an error. Value-level matching (rounding,
+ * suppressed rows, prose numbers) stays in output.numeric_grounding, so tolerance has one owner.
+ */
+function provenanceProblem(answer: AnalystAnswer, evidence: readonly MetricResult[]): string | null {
+  if (answer.status !== 'answered') {
+    // The orchestrator shows refusals and clarifications without output guardrails, so figures
+    // here would reach the user unchecked.
+    return answer.figures.length > 0 ? `status ${answer.status} must not carry figures` : null;
+  }
+  if (evidence.length === 0) return 'status answered but no tool call succeeded in this run';
+  const returned = new Set(evidence.map((e) => `${e.metricId}@${e.metricVersion}`));
+  const stray = [
+    ...new Set(answer.figures.map((f) => `${f.metricId}@${f.metricVersion}`).filter((k) => !returned.has(k))),
+  ];
+  return stray.length > 0 ? `figures cite results not returned in this run: ${stray.join(', ')}` : null;
 }
 
 function parseAnswer(response: LLMResponse): { ok: true; value: AnalystAnswer } | { ok: false; reason: string } {

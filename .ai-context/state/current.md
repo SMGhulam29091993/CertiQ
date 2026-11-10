@@ -1,4 +1,4 @@
 # current.md
 ## In progress right now
-- (none) — all live-build tasks for analyst-auditor-agents, answer-guardrails and eval-harness completed
-  2026-11-10; Gate 2 pending. See next.md.
+- (none) — analyst-auditor-agents.T02 revision completed 2026-11-10 (fake-provider tests only); Gate 2 pending with the
+  rest of the live-build tasks. See next.md.

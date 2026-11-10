@@ -36,6 +36,7 @@ const toolUse = (id: string): FakeStep => ({
   content: [{ type: 'tool_use', id, name: 'query_certified_metric', input: { metric: 'completed_orders' } }],
 });
 const final = (json: object): FakeStep => ({ stopReason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(json) }] });
+const notJson: FakeStep = { stopReason: 'end_turn', content: [{ type: 'text', text: 'Sure! 4,321 orders.' }] };
 
 const answered = {
   status: 'answered',
@@ -99,14 +100,16 @@ describe('AnalystAgent', () => {
     expect(c.tracer.summary().events.some((e) => e.name === 'budget.exceeded')).toBe(true);
   });
 
-  it('repairs one malformed final message, then succeeds', async () => {
-    const llm = new ScriptedFakeProvider([{ stopReason: 'end_turn', content: [{ type: 'text', text: 'Sure! 4,321.' }] }, final(answered)]);
+  it('repairs one malformed final message after a tool call, keeping tools defined', async () => {
+    const llm = new ScriptedFakeProvider([toolUse('t1'), notJson, final(answered)]);
     const run = await agent(llm, new FakeTool(() => ok(result))).answer('q', ctx());
     expect(run.ok).toBe(true);
-    expect(llm.requests[1]?.tools).toBeUndefined();
+    // The history holds tool_use/tool_result blocks; the real API rejects such a request without tools.
+    expect(llm.requests[2]?.tools).toHaveLength(1);
+    expect(llm.requests[2]?.messages.at(-1)?.content[0]).toMatchObject({ type: 'text' });
   });
 
-  it('fails loudly after a second malformed final message', async () => {
+  it('truncated (max_tokens) JSON twice fails with LLM_ERROR', async () => {
     const bad: FakeStep = { stopReason: 'max_tokens', content: [{ type: 'text', text: '{"status":"answ' }] };
     const run = await agent(new ScriptedFakeProvider([bad, bad]), new FakeTool(() => ok(result))).answer('q', ctx());
     expect(run.ok).toBe(false);
@@ -114,14 +117,82 @@ describe('AnalystAgent', () => {
     expect(run.error.code).toBe('LLM_ERROR');
   });
 
-  it('counts every tool_use in one turn against the budget', async () => {
-    const multi: FakeStep = {
-      stopReason: 'tool_use',
-      content: ['x', 'y', 'z'].map((id) => ({ type: 'tool_use' as const, id, name: 'query_certified_metric', input: {} })),
-    };
-    const run = await agent(new ScriptedFakeProvider([multi, final(answered)]), new FakeTool(() => ok(result))).answer('q', ctx(2));
+  it('a tool call during the repair turn fails instead of looping', async () => {
+    const tool = new FakeTool(() => ok(result));
+    const run = await agent(new ScriptedFakeProvider([notJson, toolUse('t1'), final(answered)]), tool).answer('q', ctx());
     expect(run.ok).toBe(false);
     if (run.ok) return;
-    expect(run.error.code).toBe('BUDGET_EXCEEDED');
+    expect(run.error.code).toBe('LLM_ERROR');
+    expect(tool.inputs).toHaveLength(0);
+  });
+
+  it('a refusal carrying figures is rejected (it would bypass output guardrails)', async () => {
+    const bogus = { ...answered, status: 'refused', refusalReason: 'not_certified' };
+    const run = await agent(new ScriptedFakeProvider([final(bogus)]), new FakeTool(() => ok(result))).answer('q', ctx());
+    expect(run.ok).toBe(false);
+  });
+
+  it('a figure citing a metric the run never returned is rejected', async () => {
+    const stray = { ...answered, figures: [{ ...answered.figures[0], metricId: 'gross_revenue_usd' }] };
+    const run = await agent(new ScriptedFakeProvider([toolUse('t1'), final(stray)]), new FakeTool(() => ok(result))).answer('q', ctx());
+    expect(run.ok).toBe(false);
+    if (run.ok) return;
+    expect(run.error.message).toContain('gross_revenue_usd@1.0.0');
+  });
+
+  describe('failure paths end in an error, never a made-up answer', () => {
+    it('tool returns TIMEOUT → isError fed back → model answers anyway → LLM_ERROR', async () => {
+      const llm = new ScriptedFakeProvider([toolUse('t1'), final(answered)]);
+      const c = ctx();
+      const run = await agent(llm, new FakeTool(() => err('TIMEOUT', 'Query exceeded 5000ms.'))).answer('Completed orders last month?', c);
+
+      expect(llm.requests[1]?.messages.at(-1)?.content[0]).toMatchObject({ type: 'tool_result', toolUseId: 't1', isError: true });
+      expect(run.ok).toBe(false);
+      if (run.ok) return;
+      expect(run.error.code).toBe('LLM_ERROR');
+      expect(c.tracer.summary().events.map((e) => e.name)).toEqual(expect.arrayContaining(['tool.error', 'analyst.ungrounded']));
+    });
+
+    it('model returns invalid JSON twice → one repair, then LLM_ERROR', async () => {
+      const llm = new ScriptedFakeProvider([toolUse('t1'), notJson, notJson, final(answered)]);
+      const c = ctx();
+      const run = await agent(llm, new FakeTool(() => ok(result))).answer('q', c);
+
+      expect(run.ok).toBe(false);
+      if (run.ok) return;
+      expect(run.error.code).toBe('LLM_ERROR');
+      expect(llm.requests).toHaveLength(3); // tool turn, first answer, one repair — the 4th step is never used
+      expect(c.tracer.summary().events.filter((e) => e.name === 'analyst.repair')).toHaveLength(1);
+    });
+
+    it('budget runs out mid-turn (3 tool_use, max 2) → BUDGET_EXCEEDED before the 3rd tool runs', async () => {
+      const multi: FakeStep = {
+        stopReason: 'tool_use',
+        content: ['x', 'y', 'z'].map((id) => ({ type: 'tool_use' as const, id, name: 'query_certified_metric', input: {} })),
+      };
+      const llm = new ScriptedFakeProvider([multi, final(answered)]);
+      const tool = new FakeTool(() => ok(result));
+      const c = ctx(2);
+      const run = await agent(llm, tool).answer('q', c);
+
+      expect(run.ok).toBe(false);
+      if (run.ok) return;
+      expect(run.error.code).toBe('BUDGET_EXCEEDED');
+      expect(tool.inputs).toHaveLength(2);
+      expect(llm.requests).toHaveLength(1); // the scripted answer is never requested
+      const exceeded = c.tracer.summary().events.find((e) => e.name === 'budget.exceeded');
+      expect(exceeded?.data?.reason).toBe('tool calls 3 > 2');
+    });
+
+    it('token budget exceeded by an LLM call → BUDGET_EXCEEDED before any tool runs', async () => {
+      const llm = new ScriptedFakeProvider([{ ...toolUse('t1'), usage: { inputTokens: 40_001, outputTokens: 10 } }, final(answered)]);
+      const tool = new FakeTool(() => ok(result));
+      const run = await agent(llm, tool).answer('q', ctx());
+
+      expect(run.ok).toBe(false);
+      if (run.ok) return;
+      expect(run.error.code).toBe('BUDGET_EXCEEDED');
+      expect(tool.inputs).toHaveLength(0);
+    });
   });
 });
