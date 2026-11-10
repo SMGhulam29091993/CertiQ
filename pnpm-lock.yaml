@@ -120,6 +120,9 @@ importers:
 
   packages/evals:
     dependencies:
+      '@certiq/api':
+        specifier: workspace:*
+        version: link:../../apps/api
       '@certiq/contracts':
         specifier: workspace:*
         version: link:../contracts

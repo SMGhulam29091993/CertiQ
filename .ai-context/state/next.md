@@ -4,11 +4,9 @@
   Reason: migrations were written by hand and applied with psql in the build sandbox, where the Prisma
   schema engine couldn't be downloaded. If `db:drift` reports changes, run `pnpm db:migrate:dev --name align`
   and record it in `memory/pitfalls.md`.
-- (done 2026-11-10) Gate 1 self-review — all six specs approved
-- analyst-auditor-agents.T01 — prompts — blocked on: none (Gate 1 approved 2026-11-10)
-- analyst-auditor-agents.T02 — analyst loop — blocked on: T01
-- analyst-auditor-agents.T03 — auditor — blocked on: T01
-- answer-guardrails.T04 — numeric grounding — blocked on: none (Gate 1 approved 2026-11-10)
-- analyst-auditor-agents.T04 — orchestrator — blocked on: T02, T03, answer-guardrails.T04
-- eval-harness.T02–T05 — runner, graders, report, gate — blocked on: analyst-auditor-agents.T04
-- ask-console.T04 — end-to-end browser check — blocked on: analyst-auditor-agents.T04
+- First live eval (human-run): `pnpm db:up && pnpm eval`, review it, then record the baseline with the
+  human-only baseline script (root package.json) — blocked on: none. Until then the gate applies no regression check.
+- Decide whether the Stop hook runs `eval:fast` by default (currently opt-in via `CERTIQ_EVAL_ON_STOP=1`) — blocked on: owner decision.
+- eval-reviewer pass + Gate 2 for analyst-auditor-agents.T01–T04, answer-guardrails.T04, eval-harness.T02–T05 — blocked on: first live eval
+- Spec gap to consider: total-minus-breakdown differencing can reveal a suppressed cell; no guardrail covers it.
+- ask-console.T04 — end-to-end browser check — blocked on: none (needs DB + ANTHROPIC_API_KEY)
