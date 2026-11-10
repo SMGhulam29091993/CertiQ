@@ -57,6 +57,6 @@ Reviewers give a verdict + comment; the agent writes the file edits.
 
 ## Status
 
-As of 2026-11-08: no gate has fired yet. All six specs are `Ready for Gate 1`; pre-built tasks were
+As of 2026-11-10: Gate 1 has fired — all six specs approved (self-review); no Gate 2 yet. Pre-built tasks were
 implemented ahead of Gate 1 to prepare the demo (recorded as a deviation in `state/completed.md`, not
 smoothed over). Nothing here has been exercised by a second person.

@@ -1,3 +1,3 @@
 # current.md
 ## In progress right now
-- (none) — pre-build finished 2026-11-08; next step is Gate 1 self-review of all six specs, then the live build.
+- (none) — Gate 1 approved for all six specs on 2026-11-10; next step is the live build (see next.md).

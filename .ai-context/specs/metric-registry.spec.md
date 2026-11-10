@@ -2,7 +2,7 @@
 ## Spec ID
 metric-registry
 ## Status
-Ready for Gate 1
+Gate 1 approved — reviewed by: S M Ghulam Ghaus Faiyaz (solo self-review, ADR-0004), 2026-11-10, verdict: approve, no changes
 ## Linked BRD
 .ai-context/BRD.md#BRD-001
 ## Intent
