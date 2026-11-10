@@ -27,7 +27,7 @@ POST /api/v1/ask
      → if refused / needs_clarification → return
      → output GuardrailChain: citation → numeric_grounding                  (deterministic)
      → AuditorAgent (tier strong, separate context) → pass | fail(blockers)
-  → { status, answer, audit, evidence[], guardrailsApplied[], trace }
+  → { status, answer, audit, evidence[], guardrailsApplied[], trace }   [trace.steps: one record per guardrail/agent that ran]
 ```
 
 ## Data

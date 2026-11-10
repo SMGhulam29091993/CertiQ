@@ -37,7 +37,15 @@ export interface Container {
   readonly orchestrator: IOrchestrator;
 }
 
-export function buildContainer(config: AppConfig): Container {
+export interface ContainerOptions {
+  /**
+   * Overrides the analyst's "today". The eval runner (eval-harness.T02) uses it so each golden
+   * case resolves "last month" against its own fixed date; the API leaves it unset.
+   */
+  readonly today?: () => string;
+}
+
+export function buildContainer(config: AppConfig, options: ContainerOptions = {}): Container {
   // ── Semantic layer ────────────────────────────────────────────
   const registry = YamlMetricRegistry.fromFile();
   const repository = PrismaMetricRepository.fromUrl(config.DATABASE_READONLY_URL);
@@ -57,7 +65,7 @@ export function buildContainer(config: AppConfig): Container {
   });
 
   // ── Agents ────────────────────────────────────────────────────
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = options.today ?? (() => new Date().toISOString().slice(0, 10));
   const analyst = new AnalystAgent(llm, metricTool, {
     systemPrompt: readFileSync(PROMPT_PATHS.analyst, 'utf8'),
     maxTokensPerCall: 1500,

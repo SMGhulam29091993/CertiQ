@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "description": "HTTP edge. Controllers only; all wiring happens in src/container.ts (the composition root).",
+  "exports": {
+    "./container": "./src/container.ts",
+    "./config": "./src/config.ts"
+  },
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
     "start": "tsx --env-file-if-exists=../../.env src/main.ts",

@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@certiq/api": "workspace:*",
     "@certiq/contracts": "workspace:*",
     "@certiq/guardrails": "workspace:*",
     "@certiq/semantic-layer": "workspace:*",

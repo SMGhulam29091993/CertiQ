@@ -33,6 +33,11 @@ Any fact referenced by more than one file has exactly one canonical owner. Every
 **Referenced by:** specs/ask-console, apps/api/openapi.yaml, apps/web
 **Last updated:** 2026-11-08
 
+## trace-step
+**Canonical definition:** `packages/contracts/src/observability.ts › TraceStep` (in `TraceSummary.steps`); guardrail timing in `guardrail.ts › GuardrailStepRecord`
+**Referenced by:** packages/agents (InMemoryTracer, Orchestrator), packages/guardrails (GuardrailChain), apps/web (answer-card ExecutionTrace)
+**Last updated:** 2026-11-10
+
 ## min-group-size (k)
 **Canonical definition:** `.env` `CERTIQ_MIN_GROUP_SIZE` (default 10 in `apps/api/src/config.ts`)
 **Referenced by:** specs/answer-guardrails, constitution.md, golden/suppression-tickets-small-cells

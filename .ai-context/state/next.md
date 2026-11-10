@@ -4,11 +4,17 @@
   Reason: migrations were written by hand and applied with psql in the build sandbox, where the Prisma
   schema engine couldn't be downloaded. If `db:drift` reports changes, run `pnpm db:migrate:dev --name align`
   and record it in `memory/pitfalls.md`.
-- (done 2026-11-10) Gate 1 self-review — all six specs approved
-- analyst-auditor-agents.T01 — prompts — blocked on: none (Gate 1 approved 2026-11-10)
-- analyst-auditor-agents.T02 — analyst loop — blocked on: T01
-- analyst-auditor-agents.T03 — auditor — blocked on: T01
-- answer-guardrails.T04 — numeric grounding — blocked on: none (Gate 1 approved 2026-11-10)
-- analyst-auditor-agents.T04 — orchestrator — blocked on: T02, T03, answer-guardrails.T04
-- eval-harness.T02–T05 — runner, graders, report, gate — blocked on: analyst-auditor-agents.T04
-- ask-console.T04 — end-to-end browser check — blocked on: analyst-auditor-agents.T04
+- First live eval (human-run): `pnpm db:up && pnpm eval`, review it, then record the baseline with the
+  human-only baseline script (root package.json) — blocked on: none. Until then the gate applies no regression check.
+- Decide whether the Stop hook runs `eval:fast` by default (currently opt-in via `CERTIQ_EVAL_ON_STOP=1`) — blocked on: owner decision.
+- eval-reviewer pass + Gate 2 for analyst-auditor-agents.T01–T04, answer-guardrails.T04, eval-harness.T02–T05 — blocked on: first live eval
+- Spec gap to consider: total-minus-breakdown differencing can reveal a suppressed cell; no guardrail covers it.
+- ask-console.T04 — end-to-end browser check — blocked on: none (needs DB + ANTHROPIC_API_KEY). Include the new
+  "Execution trace" list: expand it on an answered, a refused and a blocked question; check it at phone width.
+- Owner decision: amend analyst-auditor-agents AC10 / ask-console spec for per-step trace records, or mark them
+  SUPERSEDED for Gate 1 re-review — blocked on: owner decision.
+- Tool-result guardrails (small_group_suppression) run inside CertifiedMetricTool and don't appear as trace steps;
+  their effect shows in the analyst step only — blocked on: owner decision (would need the tool to see the run tracer).
+- Golden-case gaps for analyst prompt rules (human-only — agents can't edit golden/): rule 7 (tool error → correct once or refuse) has no case;
+  rule 6 (phi_request refusal) is never reached because input.phi_request blocks first; rule 3 covers only an ambiguous period,
+  not an ambiguous metric or breakdown; the graders don't check "no tool call" (rules 2, 3) or `suggestedMetrics` (rule 2) — blocked on: owner decision.
