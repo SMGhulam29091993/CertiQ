@@ -134,7 +134,7 @@ export class AnalystAgent implements IAnalystAgent {
       messages: [...req.messages],
       ...(req.tools.length > 0 ? { tools: req.tools } : {}),
       maxTokens: this.options.maxTokensPerCall,
-      temperature: 0,
+      // No `temperature`: current Claude models reject it (400 "Extra inputs are not permitted").
     });
     if (!res.ok) {
       ctx.tracer.event('llm.error', { agent: 'analyst', code: res.error.code });

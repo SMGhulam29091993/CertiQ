@@ -52,7 +52,7 @@ export class AuditorAgent implements IAuditorAgent {
         system: this.options.systemPrompt,
         messages: [...messages],
         maxTokens: this.options.maxTokens,
-        temperature: 0,
+        // No `temperature`: current Claude models reject it (400 "Extra inputs are not permitted").
       });
       if (!res.ok) {
         ctx.tracer.event('llm.error', { agent: 'auditor', code: res.error.code });
