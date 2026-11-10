@@ -12,6 +12,7 @@
 - eval-harness.T03 — 2026-11-10 — built by subagent B, reviewed by main agent — Gate 2 reviewed by: (pending)
 - eval-harness.T02, T04, T05 — 2026-11-10 — built by subagent B, reviewed by main agent; verified offline only (no live eval) — Gate 2 reviewed by: (pending)
 - analyst-auditor-agents.T02 (revision) — 2026-11-10 — repair turn keeps tools; AC1 provenance check in the analyst; failure tests (tool TIMEOUT, invalid JSON twice, budget mid-turn, token budget). Fake-provider only, no live run — Gate 2 reviewed by: (pending)
+- analyst-auditor-agents.T03 (revision) — 2026-11-10 — repair turn echoes text only (no tool_use replayed into the auditor context); answer copied field-by-field so extra runtime fields can't leak; tests: UT04 across the repair turn, auditor rejection, pass:false w/o issues, exactly-one-repair, max_tokens repair, malformed severity, orchestrator end-to-end with the real AuditorAgent (blocked / error). Fake-provider only, no live run — Gate 2 reviewed by: (pending)
 
 ## Recorded deviation
 - 2026-11-08 — The tasks above were implemented before any spec passed Gate 1, to prepare the interview

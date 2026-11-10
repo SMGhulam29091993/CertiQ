@@ -41,7 +41,7 @@ export class AuditorAgent implements IAuditorAgent {
   ): Promise<Result<AuditVerdict>> {
     const payload = JSON.stringify({
       question: input.question,
-      answer: input.answer,
+      answer: toAuditAnswer(input.answer),
       evidence: input.evidence.map(toAuditView),
     });
     const messages: LLMMessage[] = [{ role: 'user', content: [{ type: 'text', text: payload }] }];
@@ -81,12 +81,43 @@ export class AuditorAgent implements IAuditorAgent {
         return ok(normalised);
       }
       ctx.tracer.event('auditor.parse_failed', { reason: verdict.reason, attempt });
-      messages.push({ role: 'assistant', content: res.value.content });
+      // Echo only the text: the auditor has no tools, but if the model emits a tool_use block anyway,
+      // replaying it would put a tool block into the auditor's context (AC5).
+      messages.push({ role: 'assistant', content: [{ type: 'text', text: textOf(res.value) || '(no text)' }] });
       messages.push({ role: 'user', content: [{ type: 'text', text: REPAIR_INSTRUCTION }] });
     }
     // Fail closed: an audit we can't read is not an audit that passed.
     return err('AUDIT_FAILED', 'Auditor output unparseable after one repair attempt.');
   }
+}
+
+/**
+ * Copy the known AnalystAnswer fields explicitly. The type is strict, but at runtime an object with
+ * extra fields (e.g. a `reasoning` property) would otherwise leak the analyst's thinking (AC5).
+ */
+function toAuditAnswer(a: AnalystAnswer) {
+  return {
+    status: a.status,
+    summary: a.summary,
+    figures: a.figures.map((f) => ({
+      label: f.label,
+      value: f.value,
+      unit: f.unit,
+      metricId: f.metricId,
+      metricVersion: f.metricVersion,
+      period: f.period,
+    })),
+    clarifyingQuestion: a.clarifyingQuestion,
+    refusalReason: a.refusalReason,
+    suggestedMetrics: a.suggestedMetrics,
+  };
+}
+
+function textOf(response: LLMResponse): string {
+  return response.content
+    .map((b) => (b.type === 'text' ? b.text : ''))
+    .join('')
+    .trim();
 }
 
 /** The auditor checks meaning, so it gets the query and rows — not SQL text or timings. */
@@ -108,10 +139,7 @@ function normalise(v: AuditVerdict): AuditVerdict {
 
 function parseVerdict(response: LLMResponse): { ok: true; value: AuditVerdict } | { ok: false; reason: string } {
   if (response.stopReason === 'max_tokens') return { ok: false, reason: 'hit max_tokens' };
-  const text = response.content
-    .map((b) => (b.type === 'text' ? b.text : ''))
-    .join('')
-    .trim()
+  const text = textOf(response)
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/, '');
   let json: unknown;

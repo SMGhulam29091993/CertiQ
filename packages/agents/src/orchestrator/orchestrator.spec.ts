@@ -11,6 +11,8 @@ import {
   type IGuardrailChain,
   type Result,
 } from '@certiq/contracts';
+import { ScriptedFakeProvider } from '@certiq/llm';
+import { AuditorAgent } from '../auditor/auditor.agent';
 import { RunContextFactory } from '../runtime/run-context-factory';
 import { Orchestrator, type OrchestratorDeps } from './orchestrator';
 
@@ -73,6 +75,26 @@ describe('Orchestrator', () => {
     ).ask('q');
     expect(res.status).toBe('blocked');
     expect(res.blockedBy).toEqual({ guardrail: 'auditor', reason: 'wrong period' });
+  });
+
+  it('AC6/AC9 — real AuditorAgent overrides pass:true with a blocker → blocked, answer not shown as answered', async () => {
+    const llm = new ScriptedFakeProvider([
+      { stopReason: 'end_turn', content: [{ type: 'text', text: '{"pass":true,"issues":[{"severity":"blocker","message":"wrong period"}]}' }] },
+    ]);
+    const res = await new Orchestrator(deps({ auditor: new AuditorAgent(llm, { systemPrompt: 'audit', maxTokens: 800 }) })).ask('q');
+    expect(res.status).toBe('blocked');
+    expect(res.blockedBy).toEqual({ guardrail: 'auditor', reason: 'wrong period' });
+    expect(res.audit?.pass).toBe(false);
+    expect(res.userMessage).not.toBe(answer.summary);
+  });
+
+  it('AC7 — real AuditorAgent with unparseable output twice → error, no answer', async () => {
+    const prose = { stopReason: 'end_turn' as const, content: [{ type: 'text' as const, text: 'looks fine to me' }] };
+    const llm = new ScriptedFakeProvider([prose, prose]);
+    const res = await new Orchestrator(deps({ auditor: new AuditorAgent(llm, { systemPrompt: 'audit', maxTokens: 800 }) })).ask('q');
+    expect(res.status).toBe('error');
+    expect(res.answer).toBeUndefined();
+    expect(llm.requests).toHaveLength(2);
   });
 
   it('AC8 — analyst BUDGET_EXCEEDED → error', async () => {
