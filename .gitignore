@@ -9,3 +9,4 @@ coverage/
 packages/evals/reports/
 # Prisma client is generated (pnpm db:generate / turbo generate)
 packages/database/src/generated/
+.git-commit-message.txt
